@@ -60,24 +60,25 @@ export default function BuilderView() {
   const buildArchitectMessages = useCallback(
     (layerId) => {
       const msgs = [];
-      msgs.push({
-        role: 'user',
-        content: `Project: ${description}\n\nGenerate ${layerId} — ${LAYER_NAMES[layerId] || layerId}.`,
-      });
-
+      // Include prior layers as assistant/user pairs for context
       for (const entry of architectHistory) {
-        if (entry.type === 'architect_layer') {
+        if (entry.type === 'architect_layer' && entry.isApproved) {
+          if (msgs.length === 0) {
+            // First pair needs a user message
+            msgs.push({
+              role: 'user',
+              content: `Project description: ${description}\n\nGenerate ${entry.layerId} — ${LAYER_NAMES[entry.layerId] || entry.layerId}. Use ONLY the structured format from your instructions. Do not ask questions. Do not add commentary. Output the layer now.`,
+            });
+          }
           msgs.push({ role: 'assistant', content: entry.content });
-          msgs.push({ role: 'user', content: `Layer ${entry.layerId} approved. Continue.` });
         }
       }
 
-      if (msgs[msgs.length - 1]?.role === 'user') {
-        msgs[msgs.length - 1] = {
-          role: 'user',
-          content: `Now generate ${layerId} — ${LAYER_NAMES[layerId] || layerId}.`,
-        };
-      }
+      // Final user message requesting the target layer
+      msgs.push({
+        role: 'user',
+        content: `Project description: ${description}\n\nGenerate ${layerId} — ${LAYER_NAMES[layerId] || layerId}. Use ONLY the structured format from your instructions. Do not ask clarifying questions — work with the description as given. Output the LAYER/RECOMMENDED/WHY/ALTERNATIVES/ASSUMPTIONS/RETROFIT structure now.`,
+      });
 
       return msgs;
     },
