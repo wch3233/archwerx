@@ -40,7 +40,7 @@ function reducer(state, action) {
     case 'APPROVE_LAYER':
       return {
         ...state,
-        phase: 'critic_gen',
+        phase: action.payload?.nextPhase || 'generating',
         activeLayerId: null,
       };
 

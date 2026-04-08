@@ -181,12 +181,10 @@ export default function BuilderView() {
       console.log(`[ArchWerx] Approved ${layerId} → next:`, next);
 
       if (next && next.action === 'gen_layer') {
-        // Next step is another layer — go to generating, then fire it
-        dispatch({ type: 'APPROVE_LAYER' });
+        dispatch({ type: 'APPROVE_LAYER', payload: { nextPhase: 'generating' } });
         setTimeout(() => generateLayer(next.layerId), 100);
       } else if (next && next.action === 'gen_critic') {
-        // Next step is a critic review — go to critic_gen, then fire it
-        dispatch({ type: 'APPROVE_LAYER' });
+        dispatch({ type: 'APPROVE_LAYER', payload: { nextPhase: 'critic_gen' } });
         setTimeout(() => generateCritic(next.criticId, next.label), 100);
       }
     },
