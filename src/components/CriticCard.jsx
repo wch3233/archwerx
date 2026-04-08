@@ -1,5 +1,3 @@
-import { useBlueprintContext } from '../context/BlueprintContext';
-
 const QUESTION_TYPES = [
   { key: 'WHAT QUESTIONS', color: 'text-cyan-400', bg: 'bg-cyan-950/40', dot: 'bg-cyan-400' },
   { key: 'HOW QUESTIONS', color: 'text-violet-400', bg: 'bg-violet-950/40', dot: 'bg-violet-400' },
@@ -39,8 +37,7 @@ function parseCriticContent(raw) {
   return { sections: result, verdict };
 }
 
-export default function CriticCard({ critic }) {
-  const { dispatch } = useBlueprintContext();
+export default function CriticCard({ critic, onProceed, onFlag }) {
   const { criticId, label, content, awaitingDecision } = critic;
 
   const { sections, verdict } = parseCriticContent(content || '');
@@ -85,13 +82,13 @@ export default function CriticCard({ critic }) {
       {awaitingDecision && (
         <div className="flex gap-3 mt-4 pt-4 border-t border-zinc-700">
           <button
-            onClick={() => dispatch({ type: 'CRITIC_PROCEED' })}
+            onClick={onProceed}
             className="flex-1 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors cursor-pointer"
           >
             Proceed
           </button>
           <button
-            onClick={() => dispatch({ type: 'CRITIC_FLAG' })}
+            onClick={onFlag}
             className="flex-1 px-4 py-2 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors cursor-pointer"
           >
             Flag for Review

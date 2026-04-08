@@ -1,5 +1,3 @@
-import { useBlueprintContext } from '../context/BlueprintContext';
-
 const SECTIONS = [
   { key: 'RECOMMENDED', color: 'text-emerald-400', bg: 'bg-emerald-950/40' },
   { key: 'WHY', color: 'text-blue-400', bg: 'bg-blue-950/40' },
@@ -74,8 +72,7 @@ function parseLayerContent(raw) {
   return result;
 }
 
-export default function LayerCard({ layer }) {
-  const { dispatch } = useBlueprintContext();
+export default function LayerCard({ layer, onApprove, onRequestRevision }) {
   const { layerId, content, isApproved, isFlagged, awaitingApproval } = layer;
 
   console.log(`[ArchWerx] LayerCard render: layerId=${layerId}, content type=${typeof content}, length=${content?.length || 0}`);
@@ -150,13 +147,13 @@ export default function LayerCard({ layer }) {
       {awaitingApproval && (
         <div className="flex gap-3 mt-4 pt-4 border-t border-zinc-700">
           <button
-            onClick={() => dispatch({ type: 'APPROVE_LAYER' })}
+            onClick={onApprove}
             className="flex-1 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors cursor-pointer"
           >
             Approve Layer
           </button>
           <button
-            onClick={() => dispatch({ type: 'REQUEST_REVISION' })}
+            onClick={onRequestRevision}
             className="flex-1 px-4 py-2 rounded-md bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm font-medium transition-colors cursor-pointer"
           >
             Request Changes
