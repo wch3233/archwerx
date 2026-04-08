@@ -75,27 +75,51 @@ export default function CriticCard({ critic, onProceed, onFlag }) {
 
   const { sections, verdict } = parseCriticContent(content || '');
 
-  const isFlagged = verdict && verdict.toUpperCase().startsWith('FLAG');
-  const verdictColor = isFlagged ? 'text-amber-400 bg-amber-950/40' : 'text-emerald-400 bg-emerald-950/40';
+  const verdictIsFlag = verdict && verdict.toUpperCase().startsWith('FLAG');
+  const verdictColor = verdictIsFlag ? 'text-amber-400 bg-amber-950/40' : 'text-emerald-400 bg-emerald-950/40';
   const title = label ? `Critic Review \u2014 ${label}` : `Critic Review \u2014 ${criticId}`;
 
-  // Collapsed view
+  // Badge text: "Review" while awaiting decision, "Flagged"/"Proceed" after decided
+  const badgeText = awaitingDecision
+    ? (verdictIsFlag ? 'Review' : 'Review')
+    : (verdictIsFlag ? 'Flagged' : 'Proceed');
+  const badgeClass = awaitingDecision
+    ? 'bg-cyan-900/60 text-cyan-400'
+    : verdictIsFlag ? 'bg-amber-900/60 text-amber-400' : 'bg-emerald-900/60 text-emerald-400';
+
+  // Collapsed view — show buttons if still awaiting decision
   if (!expanded) {
     return (
-      <div
-        className="rounded-lg border border-zinc-700/40 bg-zinc-900 px-5 py-3 mb-2 cursor-pointer hover:bg-zinc-800/80 transition-colors"
-        onClick={() => setExpanded(true)}
-      >
-        <div className="flex items-center gap-3">
+      <div className="rounded-lg border border-zinc-700/40 bg-zinc-900 px-5 py-3 mb-2">
+        <div
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => setExpanded(true)}
+        >
           <span className="text-zinc-100 font-mono text-sm font-semibold shrink-0">{title}</span>
           {verdict && (
-            <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${isFlagged ? 'bg-amber-900/60 text-amber-400' : 'bg-emerald-900/60 text-emerald-400'}`}>
-              {isFlagged ? 'Flagged' : 'Proceed'}
+            <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${badgeClass}`}>
+              {badgeText}
             </span>
           )}
           <span className="flex-1" />
           <Chevron expanded={false} />
         </div>
+        {awaitingDecision && (
+          <div className="flex gap-3 mt-3 pt-3 border-t border-zinc-700">
+            <button
+              onClick={onProceed}
+              className="flex-1 px-4 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              Proceed
+            </button>
+            <button
+              onClick={onFlag}
+              className="flex-1 px-4 py-2 rounded-md bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              Flag for Review
+            </button>
+          </div>
+        )}
       </div>
     );
   }
