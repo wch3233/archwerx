@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const QUESTION_TYPES = [
   { key: 'WHAT QUESTIONS', color: 'text-cyan-400', bg: 'bg-cyan-950/40', dot: 'bg-cyan-400' },
   { key: 'HOW QUESTIONS', color: 'text-violet-400', bg: 'bg-violet-950/40', dot: 'bg-violet-400' },
@@ -11,46 +13,100 @@ function parseCriticContent(raw) {
   let verdict = null;
   let current = null;
 
-  for (const line of raw.split('\n')) {
-    const trimmed = line.trim();
+  for (const line of (raw || '').split('\n')) {
+    const stripped = line.trim().replace(/\*+/g, '');
+    if (!stripped) continue;
 
-    if (trimmed.startsWith('VERDICT:')) {
-      verdict = trimmed.slice('VERDICT:'.length).trim();
+    const upper = stripped.toUpperCase();
+
+    if (upper.startsWith('VERDICT:')) {
+      verdict = stripped.slice(stripped.indexOf(':') + 1).trim();
       current = null;
       continue;
     }
 
-    const match = QUESTION_TYPES.find((q) => trimmed.startsWith(q.key + ':'));
-    if (match) {
-      current = match.key;
-      result[current] = [];
-      continue;
+    let matched = false;
+    for (const q of QUESTION_TYPES) {
+      if (upper === q.key + ':' || upper.startsWith(q.key + ':')) {
+        current = q.key;
+        result[current] = [];
+        matched = true;
+        break;
+      }
     }
+    if (matched) continue;
 
-    if (current && trimmed.startsWith('-')) {
-      result[current].push(trimmed.slice(1).trim());
-    } else if (current && trimmed) {
-      result[current].push(trimmed);
+    // Skip header lines
+    if (upper.startsWith('CRITIC REVIEW')) continue;
+    if (!current) continue;
+
+    const bulletMatch = stripped.match(/^[-•*]\s*(.+)/) || stripped.match(/^\d+\.\s*(.+)/);
+    if (bulletMatch) {
+      const text = bulletMatch[1].replace(/\*+/g, '').trim();
+      if (text) result[current].push(text);
+    } else {
+      result[current].push(stripped);
     }
   }
 
   return { sections: result, verdict };
 }
 
+function Chevron({ expanded }) {
+  return (
+    <svg
+      className={`w-4 h-4 text-zinc-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
 export default function CriticCard({ critic, onProceed, onFlag }) {
   const { criticId, label, content, awaitingDecision } = critic;
+  const collapsible = !awaitingDecision;
+  const [expanded, setExpanded] = useState(!collapsible);
 
   const { sections, verdict } = parseCriticContent(content || '');
 
-  const isFlagged = verdict && verdict.startsWith('FLAG');
+  const isFlagged = verdict && verdict.toUpperCase().startsWith('FLAG');
   const verdictColor = isFlagged ? 'text-amber-400 bg-amber-950/40' : 'text-emerald-400 bg-emerald-950/40';
+  const title = label ? `Critic Review \u2014 ${label}` : `Critic Review \u2014 ${criticId}`;
+
+  // Collapsed view for resolved critics
+  if (collapsible && !expanded) {
+    return (
+      <div
+        className="rounded-lg border border-zinc-700/40 bg-zinc-900 px-5 py-3 mb-2 cursor-pointer hover:bg-zinc-800/80 transition-colors"
+        onClick={() => setExpanded(true)}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-zinc-100 font-mono text-sm font-semibold shrink-0">{title}</span>
+          {verdict && (
+            <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${isFlagged ? 'bg-amber-900/60 text-amber-400' : 'bg-emerald-900/60 text-emerald-400'}`}>
+              {isFlagged ? 'Flagged' : 'Proceed'}
+            </span>
+          )}
+          <span className="flex-1" />
+          <Chevron expanded={false} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-5 mb-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-zinc-100 font-mono">
-          Critic Review {label ? `\u2014 ${label}` : `\u2014 ${criticId}`}
-        </h3>
+        <h3 className="text-lg font-semibold text-zinc-100 font-mono">{title}</h3>
+        {collapsible && (
+          <button
+            onClick={() => setExpanded(false)}
+            className="p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+          >
+            <Chevron expanded={true} />
+          </button>
+        )}
       </div>
 
       {QUESTION_TYPES.map(({ key, color, bg, dot }) => {
