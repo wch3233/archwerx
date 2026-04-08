@@ -20,26 +20,37 @@ const CRITIC_SECTIONS = [
 ];
 
 function parseContent(raw, sectionDefs) {
+  if (!raw || typeof raw !== 'string') return {};
+
   const result = {};
   let current = null;
 
-  for (const line of (raw || '').split('\n')) {
-    const trimmed = line.trim().replace(/\*{1,2}/g, '');
-    const upper = trimmed.toUpperCase();
-    const match = sectionDefs.find((s) => upper.startsWith(s.key + ':') || upper.startsWith(s.key + ' :'));
-    if (match) {
-      current = match.key;
-      const colonIdx = trimmed.indexOf(':');
-      const after = colonIdx >= 0 ? trimmed.slice(colonIdx + 1).trim() : '';
-      result[current] = after ? [after] : [];
-      continue;
+  for (const line of raw.split('\n')) {
+    const stripped = line.trim().replace(/\*+/g, '');
+    if (!stripped) continue;
+
+    const upper = stripped.toUpperCase();
+
+    let matched = false;
+    for (const section of sectionDefs) {
+      if (upper === section.key + ':' || upper.startsWith(section.key + ': ') || upper.startsWith(section.key + ':')) {
+        current = section.key;
+        const colonPos = stripped.indexOf(':');
+        const after = colonPos >= 0 ? stripped.slice(colonPos + 1).trim() : '';
+        result[current] = after ? [after] : [];
+        matched = true;
+        break;
+      }
     }
+    if (matched) continue;
     if (!current) continue;
-    if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
-      const bullet = trimmed.slice(1).trim().replace(/\*{1,2}/g, '');
-      if (bullet) result[current].push(bullet);
-    } else if (trimmed) {
-      result[current].push(trimmed);
+
+    const bulletMatch = stripped.match(/^[-•*]\s*(.+)/) || stripped.match(/^\d+\.\s*(.+)/);
+    if (bulletMatch) {
+      const text = bulletMatch[1].replace(/\*+/g, '').trim();
+      if (text) result[current].push(text);
+    } else {
+      result[current].push(stripped);
     }
   }
 
