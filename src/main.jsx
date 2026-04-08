@@ -3,7 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import './index.css';
 import { BlueprintProvider } from './context/BlueprintContext';
-import { resolveKey } from './lib/api';
+import { resolveKey, resolvedKeySource } from './lib/api';
+
+console.log(`[ArchWerx] API key source: ${resolvedKeySource()}`);
 import { loadActiveSession, clearActive } from './lib/storage';
 import BuilderView from './views/BuilderView';
 import HistoryView from './views/HistoryView';

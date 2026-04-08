@@ -63,11 +63,22 @@ VERDICT: FLAG FOR REVIEW — [specific layer and question]
 Questions must be specific to THIS architecture. The best questions cannot be answered without revealing a flaw or hidden assumption.`;
 
 export function resolveKey() {
-  return (
-    import.meta.env.VITE_ANTHROPIC_API_KEY ||
-    localStorage.getItem('archwerx_api_key') ||
-    null
-  );
+  const envKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  if (envKey && envKey !== 'undefined' && envKey !== 'your_key_here') {
+    return envKey;
+  }
+  return localStorage.getItem('archwerx_api_key') || null;
+}
+
+export function resolvedKeySource() {
+  const envKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  if (envKey && envKey !== 'undefined' && envKey !== 'your_key_here') {
+    return 'env';
+  }
+  if (localStorage.getItem('archwerx_api_key')) {
+    return 'localStorage';
+  }
+  return 'none';
 }
 
 async function callAPI(system, messages, key) {
