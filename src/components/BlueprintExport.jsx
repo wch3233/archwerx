@@ -1,7 +1,9 @@
 // RETROFIT: Node 4
 
 function shortTitle(description) {
-  return (description || 'Untitled').split(/\s+/).slice(0, 6).join(' ');
+  const words = (description || 'Untitled').split(/\s+/);
+  const title = words.slice(0, 6).join(' ');
+  return words.length > 6 ? title + '...' : title;
 }
 
 function exportMarkdown(blueprint) {
@@ -67,7 +69,8 @@ export default function BlueprintExport({ blueprint }) {
 
   function handleExport() {
     const md = exportMarkdown(blueprint);
-    const slug = shortTitle(blueprint.description)
+    console.log(`[ArchWerx] Export: ${md.length} characters`);
+    const slug = shortTitle(blueprint.description).replace(/\.+$/, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/-+$/, '');
