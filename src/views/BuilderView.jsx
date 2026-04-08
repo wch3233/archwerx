@@ -222,35 +222,46 @@ export default function BuilderView() {
     updatedAt: new Date().toISOString(),
   };
 
-  const renderedEntries = architectHistory.map((entry, i) => {
+  // Deduplicate: take last entry per layerId / criticId, render in sequence order
+  const layerLatest = new Map();
+  const criticLatest = new Map();
+  for (const entry of architectHistory) {
+    if (entry.type === 'architect_layer') layerLatest.set(entry.layerId, entry);
+    else if (entry.type === 'critic_review') criticLatest.set(entry.criticId, entry);
+  }
+
+  const renderedEntries = [];
+  const seenLayers = new Set();
+  const seenCritics = new Set();
+  for (const entry of architectHistory) {
     if (entry.type === 'architect_layer') {
-      return (
+      if (seenLayers.has(entry.layerId)) continue;
+      seenLayers.add(entry.layerId);
+      const latest = layerLatest.get(entry.layerId);
+      const isActive = latest.awaitingApproval && phase === 'await_layer';
+      renderedEntries.push(
         <LayerCard
-          key={`layer-${entry.layerId}-${i}`}
-          layer={{
-            ...entry,
-            awaitingApproval: entry.awaitingApproval && phase === 'await_layer',
-          }}
-          onApprove={() => handleApproveLayer(entry.layerId)}
+          key={`layer-${latest.layerId}`}
+          layer={{ ...latest, awaitingApproval: isActive }}
+          onApprove={() => handleApproveLayer(latest.layerId)}
           onRequestRevision={() => dispatch({ type: 'REQUEST_REVISION' })}
-        />
+        />,
       );
-    }
-    if (entry.type === 'critic_review') {
-      return (
+    } else if (entry.type === 'critic_review') {
+      if (seenCritics.has(entry.criticId)) continue;
+      seenCritics.add(entry.criticId);
+      const latest = criticLatest.get(entry.criticId);
+      const isActive = latest.awaitingDecision && phase === 'await_critic';
+      renderedEntries.push(
         <CriticCard
-          key={`critic-${entry.criticId}-${i}`}
-          critic={{
-            ...entry,
-            awaitingDecision: entry.awaitingDecision && phase === 'await_critic',
-          }}
-          onProceed={() => handleCriticProceed(entry.criticId)}
-          onFlag={() => handleCriticFlag(entry.criticId)}
-        />
+          key={`critic-${latest.criticId}`}
+          critic={{ ...latest, awaitingDecision: isActive }}
+          onProceed={() => handleCriticProceed(latest.criticId)}
+          onFlag={() => handleCriticFlag(latest.criticId)}
+        />,
       );
     }
-    return null;
-  });
+  }
 
   if (phase === 'idle') {
     return (

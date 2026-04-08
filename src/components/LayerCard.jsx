@@ -94,7 +94,9 @@ export default function LayerCard({ layer, onApprove, onRequestRevision }) {
       >
         <div className="flex items-center gap-3">
           <span className="text-zinc-100 font-mono text-sm font-semibold shrink-0">{header}</span>
-          <span className="text-zinc-400 text-sm truncate flex-1">{recommended}</span>
+          <span className="text-zinc-400 text-sm truncate flex-1">
+            {recommended.length > 80 ? recommended.slice(0, 80) + '...' : recommended}
+          </span>
           {isApproved && (
             <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-400 shrink-0">
               Approved
