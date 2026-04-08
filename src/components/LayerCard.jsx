@@ -82,7 +82,7 @@ export default function LayerCard({ layer, onApprove, onRequestRevision }) {
     : isFlagged
       ? 'border-amber-500'
       : awaitingApproval
-        ? 'border-cyan-500 animate-pulse'
+        ? 'border-cyan-500'
         : 'border-zinc-700';
 
   // Collapsed view

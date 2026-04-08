@@ -39,7 +39,7 @@ export default function ProgressTrack({ layers = [], critics = [], phase = 'idle
           state === 'done'
             ? 'bg-emerald-500'
             : state === 'active'
-              ? 'bg-cyan-500 animate-pulse'
+              ? 'bg-cyan-500'
               : 'bg-zinc-700';
 
         const textColor =
