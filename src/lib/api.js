@@ -1,5 +1,8 @@
 const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-20250514';
+const MODELS = {
+  opus: 'claude-opus-4-6',
+  sonnet: 'claude-sonnet-4-6',
+};
 const MAX_TOKENS = 1000;
 
 const ARCH_SYS = `You are ArchWerx, a senior software architect operating under RAPTOR design principles (Recursive Abstractive Processing for Tree-Organized Reasoning). You generate layered architectural blueprints, one layer at a time.
@@ -84,7 +87,7 @@ export function resolvedKeySource() {
   return 'none';
 }
 
-async function callAPI(system, messages, key) {
+async function callAPI(system, messages, key, model) {
   const apiKey = key || resolveKey();
   if (!apiKey) throw new Error('No API key configured. Add one in Settings.');
 
@@ -99,7 +102,7 @@ async function callAPI(system, messages, key) {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         max_tokens: MAX_TOKENS,
         system,
         messages,
@@ -146,16 +149,20 @@ async function callAPI(system, messages, key) {
 }
 
 // RETROFIT: Node 2
-export async function callArchitect(messages, key) {
-  return callAPI(ARCH_SYS, messages, key);
+export async function callArchitect(messages, key, layerId) {
+  const model = layerId === 'L0' ? MODELS.opus : MODELS.sonnet;
+  console.log(`[ArchWerx] architect ${layerId} → ${model}`);
+  return callAPI(ARCH_SYS, messages, key, model);
 }
 
 // RETROFIT: Node 2
-export async function callCritic(context, key) {
+export async function callCritic(context, key, criticId) {
+  const model = criticId === 'CR3' ? MODELS.opus : MODELS.sonnet;
+  console.log(`[ArchWerx] critic ${criticId} → ${model}`);
   const messages = Array.isArray(context)
     ? context
     : [{ role: 'user', content: context }];
-  return callAPI(CRITIC_SYS, messages, key);
+  return callAPI(CRITIC_SYS, messages, key, model);
 }
 
 export default { callArchitect, callCritic };

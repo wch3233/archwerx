@@ -101,7 +101,7 @@ export default function BuilderView() {
       setError(null);
       try {
         const messages = buildArchitectMessages(layerId);
-        const content = await callArchitect(messages);
+        const content = await callArchitect(messages, undefined, layerId);
         dispatch({
           type: 'PUSH_HISTORY',
           payload: {
@@ -130,7 +130,7 @@ export default function BuilderView() {
       setError(null);
       try {
         const context = buildCriticContext(label);
-        const content = await callCritic(context);
+        const content = await callCritic(context, undefined, criticId);
         dispatch({
           type: 'PUSH_HISTORY',
           payload: {
