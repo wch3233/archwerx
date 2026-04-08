@@ -1,24 +1,50 @@
 // RETROFIT: Node 4
 
+function shortTitle(description) {
+  return (description || 'Untitled').split(/\s+/).slice(0, 6).join(' ');
+}
+
 function exportMarkdown(blueprint) {
+  const title = shortTitle(blueprint.description);
   const lines = [];
-  lines.push(`# ArchWerx Blueprint — ${blueprint.description || 'Untitled'}`);
+  lines.push(`# ArchWerx Blueprint — ${title}`);
   lines.push(`**ID:** ${blueprint.id}`);
   lines.push(`**Date:** ${blueprint.updatedAt || new Date().toISOString()}`);
+  lines.push(`**Description:** ${blueprint.description || ''}`);
   lines.push('');
 
+  // Deduplicate: take last entry per layerId / criticId
+  const layerMap = new Map();
+  const criticMap = new Map();
   for (const entry of blueprint.architectHistory || []) {
     if (entry.type === 'architect_layer') {
+      layerMap.set(entry.layerId, entry);
+    } else if (entry.type === 'critic_review') {
+      criticMap.set(entry.criticId, entry);
+    }
+  }
+
+  // Output in original sequence order, but only the final version of each
+  const seen = new Set();
+  for (const entry of blueprint.architectHistory || []) {
+    if (entry.type === 'architect_layer') {
+      if (seen.has(entry.layerId)) continue;
+      const final = layerMap.get(entry.layerId);
+      seen.add(entry.layerId);
       lines.push('---');
       lines.push('');
-      lines.push(entry.content || '');
+      lines.push(final.content || '');
       lines.push('');
     } else if (entry.type === 'critic_review') {
+      const key = `critic-${entry.criticId}`;
+      if (seen.has(key)) continue;
+      const final = criticMap.get(entry.criticId);
+      seen.add(key);
       lines.push('---');
       lines.push('');
-      lines.push(`### Critic Review — ${entry.label || entry.criticId}`);
+      lines.push(`### Critic Review — ${final.label || final.criticId}`);
       lines.push('');
-      lines.push(entry.content || '');
+      lines.push(final.content || '');
       lines.push('');
     }
   }
@@ -41,12 +67,12 @@ export default function BlueprintExport({ blueprint }) {
 
   function handleExport() {
     const md = exportMarkdown(blueprint);
-    const title = (blueprint.description || 'untitled')
+    const slug = shortTitle(blueprint.description)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .slice(0, 40);
+      .replace(/-+$/, '');
     const date = new Date().toISOString().slice(0, 10);
-    downloadFile(`archwerx-${title}-${date}.md`, md);
+    downloadFile(`archwerx-${slug}-${date}.md`, md);
   }
 
   return (
