@@ -324,14 +324,14 @@ export default function BuilderView() {
 
       {phase === 'generating' && !error && (
         <div className="flex items-center gap-3 my-4 p-4 rounded-lg bg-zinc-800 border border-zinc-700">
-          <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+          <div className="waveform"><span></span><span></span><span></span><span></span><span></span></div>
           <span className="text-cyan-400 text-sm">Generating...</span>
         </div>
       )}
 
       {phase === 'critic_gen' && !error && (
         <div className="flex items-center gap-3 my-4 p-4 rounded-lg bg-zinc-800 border border-zinc-700">
-          <div className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+          <div className="waveform"><span></span><span></span><span></span><span></span><span></span></div>
           <span className="text-violet-400 text-sm">Critic is reviewing...</span>
         </div>
       )}
