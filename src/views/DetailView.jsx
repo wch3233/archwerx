@@ -24,17 +24,21 @@ function parseContent(raw, sectionDefs) {
   let current = null;
 
   for (const line of (raw || '').split('\n')) {
-    const trimmed = line.trim();
-    const match = sectionDefs.find((s) => trimmed.startsWith(s.key + ':'));
+    const trimmed = line.trim().replace(/\*{1,2}/g, '');
+    const upper = trimmed.toUpperCase();
+    const match = sectionDefs.find((s) => upper.startsWith(s.key + ':') || upper.startsWith(s.key + ' :'));
     if (match) {
       current = match.key;
-      const after = trimmed.slice(match.key.length + 1).trim();
+      const colonIdx = trimmed.indexOf(':');
+      const after = colonIdx >= 0 ? trimmed.slice(colonIdx + 1).trim() : '';
       result[current] = after ? [after] : [];
       continue;
     }
-    if (current && trimmed.startsWith('-')) {
-      result[current].push(trimmed.slice(1).trim());
-    } else if (current && trimmed) {
+    if (!current) continue;
+    if (trimmed.startsWith('-') || trimmed.startsWith('•')) {
+      const bullet = trimmed.slice(1).trim().replace(/\*{1,2}/g, '');
+      if (bullet) result[current].push(bullet);
+    } else if (trimmed) {
       result[current].push(trimmed);
     }
   }

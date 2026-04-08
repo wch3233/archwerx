@@ -12,22 +12,35 @@ function parseLayerContent(raw) {
   const result = {};
   let current = null;
 
-  for (const line of raw.split('\n')) {
-    const trimmed = line.trim();
+  console.log('[ArchWerx] Raw layer content:', raw);
 
-    // Check if this line starts a known section
-    const match = SECTIONS.find((s) => trimmed.startsWith(s.key + ':'));
+  for (const line of raw.split('\n')) {
+    // Strip markdown bold/italic markers for matching
+    const trimmed = line.trim().replace(/\*{1,2}/g, '');
+
+    // Check if this line starts a known section (case-insensitive)
+    const upper = trimmed.toUpperCase();
+    const match = SECTIONS.find((s) => upper.startsWith(s.key + ':') || upper.startsWith(s.key + ' :'));
     if (match) {
       current = match.key;
-      const after = trimmed.slice(match.key.length + 1).trim();
+      // Extract text after the colon, accounting for original formatting
+      const colonIdx = trimmed.indexOf(':');
+      const after = colonIdx >= 0 ? trimmed.slice(colonIdx + 1).trim() : '';
       result[current] = after ? [after] : [];
       continue;
     }
 
+    if (!current) continue;
+
     // Accumulate bullet lines under the current section
-    if (current && trimmed.startsWith('-')) {
-      result[current].push(trimmed.slice(1).trim());
-    } else if (current && trimmed) {
+    if (trimmed.startsWith('-')) {
+      const bullet = trimmed.slice(1).trim().replace(/\*{1,2}/g, '');
+      if (bullet) result[current].push(bullet);
+    } else if (trimmed.startsWith('•')) {
+      const bullet = trimmed.slice(1).trim().replace(/\*{1,2}/g, '');
+      if (bullet) result[current].push(bullet);
+    } else if (trimmed) {
+      // Non-empty continuation line — append to current section
       result[current].push(trimmed);
     }
   }
