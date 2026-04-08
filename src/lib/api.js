@@ -93,8 +93,7 @@ async function callAPI(system, messages, key, model) {
   const apiKey = key || resolveKey();
   if (!apiKey) throw new Error('No API key configured. Add one in Settings.');
 
-  const isOpus = model && model.includes('opus');
-  const timeoutMs = isOpus ? 120000 : 60000;
+  const timeoutMs = 60000;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -118,7 +117,7 @@ async function callAPI(system, messages, key, model) {
     });
   } catch (networkErr) {
     if (networkErr.name === 'AbortError') {
-      throw new Error(`Request timed out after ${timeoutMs / 1000} seconds. The API may be slow — try again.`);
+      throw new Error('Request timed out after 60 seconds — click Retry to try again.');
     }
     throw new Error(
       `Network error: ${networkErr.message}. Check your internet connection and try again.`,

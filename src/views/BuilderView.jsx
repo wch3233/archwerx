@@ -82,30 +82,34 @@ export default function BuilderView() {
 
   const buildCriticContext = useCallback(
     (label) => {
-      // Send only RECOMMENDED + ASSUMPTIONS per layer to reduce context size
       const summaries = layers.map((l) => {
-        const lines = (l.content || '').split('\n');
-        const out = [];
-        let capturing = false;
-        let section = '';
-        for (const line of lines) {
-          const upper = line.trim().replace(/\*+/g, '').toUpperCase();
-          if (upper.startsWith('RECOMMENDED:') || upper.startsWith('ASSUMPTIONS MADE:')) {
-            capturing = true;
-            section = upper.startsWith('RECOMMENDED') ? 'RECOMMENDED' : 'ASSUMPTIONS MADE';
-            out.push(line.trim());
-          } else if (capturing && (upper.startsWith('-') || upper.startsWith('•') || upper.startsWith('*'))) {
-            out.push(line.trim());
-          } else if (capturing && upper && !upper.startsWith('-') && !upper.startsWith('•')) {
-            // New section header — stop capturing
-            const isNewSection = /^[A-Z][A-Z\s]+:/.test(upper);
-            if (isNewSection) capturing = false;
-            else out.push(line.trim());
+        const raw = l.content || '';
+        const name = LAYER_NAMES[l.layerId] || l.layerId;
+
+        // Extract RECOMMENDED value
+        const recMatch = raw.match(/RECOMMENDED:\s*(.+)/i);
+        const rec = recMatch ? recMatch[1].trim().slice(0, 150) : '(none)';
+
+        // Extract first 2 ASSUMPTIONS
+        const assumptions = [];
+        let inAssumptions = false;
+        for (const line of raw.split('\n')) {
+          const stripped = line.trim().replace(/\*+/g, '');
+          if (/^ASSUMPTIONS MADE:/i.test(stripped)) { inAssumptions = true; continue; }
+          if (inAssumptions && /^[A-Z][A-Z\s]+:/.test(stripped.toUpperCase())) break;
+          if (inAssumptions && /^[-•*]/.test(stripped)) {
+            assumptions.push(stripped.replace(/^[-•*]\s*/, '').slice(0, 100));
+            if (assumptions.length >= 2) break;
           }
         }
-        return `${l.layerId}:\n${out.join('\n')}`;
+
+        const assumStr = assumptions.length > 0
+          ? assumptions.map((a) => `- ${a}`).join('\n')
+          : '- (none stated)';
+
+        return `Layer ${l.layerId.slice(1)} — ${name}\nRecommended: ${rec}\nKey assumptions:\n${assumStr}`;
       });
-      return `Review the following architectural decisions:\n\n${summaries.join('\n\n---\n\n')}`;
+      return `Review the following architectural decisions:\n\n${summaries.join('\n\n')}`;
     },
     [layers],
   );
