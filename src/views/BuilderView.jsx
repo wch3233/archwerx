@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { useBlueprintContext } from '../context/BlueprintContext';
 import { callArchitect, callCritic } from '../lib/api';
 import ProgressTrack from '../components/ProgressTrack';
@@ -51,6 +51,21 @@ export default function BuilderView() {
   const { phase, description, architectHistory } = state;
   const generating = useRef(false);
   const [error, setError] = useState(null);
+  const [slowTimer, setSlowTimer] = useState(false);
+  const slowTimerRef = useRef(null);
+  const lastRetryRef = useRef(null);
+
+  // Start a 45s timer when generation begins, clear when it ends
+  useEffect(() => {
+    if ((phase === 'generating' || phase === 'critic_gen') && !error) {
+      setSlowTimer(false);
+      slowTimerRef.current = setTimeout(() => setSlowTimer(true), 45000);
+    } else {
+      setSlowTimer(false);
+      if (slowTimerRef.current) clearTimeout(slowTimerRef.current);
+    }
+    return () => { if (slowTimerRef.current) clearTimeout(slowTimerRef.current); };
+  }, [phase, error]);
 
   const buildArchitectMessages = useCallback(
     (layerId) => {
@@ -119,6 +134,7 @@ export default function BuilderView() {
       if (generating.current) return;
       generating.current = true;
       setError(null);
+      lastRetryRef.current = () => generateLayer(layerId);
       try {
         const messages = buildArchitectMessages(layerId);
         const content = await callArchitect(messages, undefined, layerId);
@@ -148,6 +164,7 @@ export default function BuilderView() {
       if (generating.current) return;
       generating.current = true;
       setError(null);
+      lastRetryRef.current = () => generateCritic(criticId, label);
       try {
         const context = buildCriticContext(label);
         const content = await callCritic(context, undefined, criticId);
@@ -327,16 +344,36 @@ export default function BuilderView() {
       )}
 
       {phase === 'generating' && !error && (
-        <div className="flex items-center gap-3 my-4 p-4 rounded-lg bg-zinc-800 border border-zinc-700">
-          <div className="waveform"><span></span><span></span><span></span><span></span><span></span></div>
-          <span className="text-cyan-400 text-sm">Generating...</span>
+        <div className="my-4 p-4 rounded-lg bg-zinc-800 border border-zinc-700">
+          <div className="flex items-center gap-3">
+            <div className="waveform"><span></span><span></span><span></span><span></span><span></span></div>
+            <span className="text-cyan-400 text-sm">Generating...</span>
+          </div>
+          {slowTimer && (
+            <button
+              onClick={() => { generating.current = false; lastRetryRef.current?.(); }}
+              className="mt-3 px-4 py-2 rounded-md bg-amber-700 hover:bg-amber-600 text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              Taking too long — retry this layer
+            </button>
+          )}
         </div>
       )}
 
       {phase === 'critic_gen' && !error && (
-        <div className="flex items-center gap-3 my-4 p-4 rounded-lg bg-zinc-800 border border-zinc-700">
-          <div className="waveform"><span></span><span></span><span></span><span></span><span></span></div>
-          <span className="text-violet-400 text-sm">Critic is reviewing...</span>
+        <div className="my-4 p-4 rounded-lg bg-zinc-800 border border-zinc-700">
+          <div className="flex items-center gap-3">
+            <div className="waveform"><span></span><span></span><span></span><span></span><span></span></div>
+            <span className="text-violet-400 text-sm">Critic is reviewing...</span>
+          </div>
+          {slowTimer && (
+            <button
+              onClick={() => { generating.current = false; lastRetryRef.current?.(); }}
+              className="mt-3 px-4 py-2 rounded-md bg-amber-700 hover:bg-amber-600 text-white text-sm font-medium transition-colors cursor-pointer"
+            >
+              Taking too long — retry this layer
+            </button>
+          )}
         </div>
       )}
 

@@ -93,7 +93,7 @@ async function callAPI(system, messages, key, model) {
   const apiKey = key || resolveKey();
   if (!apiKey) throw new Error('No API key configured. Add one in Settings.');
 
-  const timeoutMs = 60000;
+  const timeoutMs = 90000;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -117,7 +117,7 @@ async function callAPI(system, messages, key, model) {
     });
   } catch (networkErr) {
     if (networkErr.name === 'AbortError') {
-      throw new Error('Request timed out after 60 seconds — click Retry to try again.');
+      throw new Error('Request timed out after 90 seconds — click Retry to try again.');
     }
     throw new Error(
       `Network error: ${networkErr.message}. Check your internet connection and try again.`,
@@ -162,7 +162,7 @@ async function callAPI(system, messages, key, model) {
 
 // RETROFIT: Node 2
 export async function callArchitect(messages, key, layerId) {
-  const model = layerId === 'L0' ? MODELS.opus : MODELS.sonnet;
+  const model = (layerId === 'L0' || layerId === 'L4') ? MODELS.opus : MODELS.sonnet;
   console.log(`[ArchWerx] architect ${layerId} → ${model}`);
   return callAPI(ARCH_SYS, messages, key, model);
 }
