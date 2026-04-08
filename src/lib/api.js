@@ -91,10 +91,14 @@ async function callAPI(system, messages, key, model) {
   const apiKey = key || resolveKey();
   if (!apiKey) throw new Error('No API key configured. Add one in Settings.');
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
   let res;
   try {
     res = await fetch(API_URL, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
@@ -109,9 +113,14 @@ async function callAPI(system, messages, key, model) {
       }),
     });
   } catch (networkErr) {
+    if (networkErr.name === 'AbortError') {
+      throw new Error('Request timed out after 30 seconds. The API may be slow — try again.');
+    }
     throw new Error(
       `Network error: ${networkErr.message}. Check your internet connection and try again.`,
     );
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!res.ok) {

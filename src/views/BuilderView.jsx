@@ -152,6 +152,7 @@ export default function BuilderView() {
     [buildCriticContext, dispatch],
   );
 
+  // Drive initial generation and revision re-generation only
   useEffect(() => {
     if (phase === 'generating' && !generating.current && !error) {
       if (layers.length === 0) {
@@ -165,18 +166,11 @@ export default function BuilderView() {
         return;
       }
     }
-
-    if (phase === 'critic_gen' && !error) {
-      const lastApproved = lastApprovedLayerId(layers);
-      const next = nextAfterApprove(lastApproved);
-      if (next && next.action === 'gen_critic') {
-        generateCritic(next.criticId, next.label);
-      }
-    }
-  }, [phase, layers, generateLayer, generateCritic, error]);
+  }, [phase, layers, generateLayer, error]);
 
   const handleApproveLayer = useCallback(
     (layerId) => {
+      // Mark layer approved in history
       dispatch({
         type: 'PUSH_HISTORY',
         payload: {
@@ -188,16 +182,20 @@ export default function BuilderView() {
         },
       });
 
-      dispatch({ type: 'APPROVE_LAYER' });
-
       const next = nextAfterApprove(layerId);
-      if (next) {
-        if (next.action === 'gen_layer') {
-          setTimeout(() => generateLayer(next.layerId), 100);
-        }
+      console.log(`[ArchWerx] Approved ${layerId} → next:`, next);
+
+      if (next && next.action === 'gen_layer') {
+        // Next step is another layer — go to generating, then fire it
+        dispatch({ type: 'APPROVE_LAYER' });
+        setTimeout(() => generateLayer(next.layerId), 100);
+      } else if (next && next.action === 'gen_critic') {
+        // Next step is a critic review — go to critic_gen, then fire it
+        dispatch({ type: 'APPROVE_LAYER' });
+        setTimeout(() => generateCritic(next.criticId, next.label), 100);
       }
     },
-    [architectHistory, dispatch, generateLayer],
+    [architectHistory, dispatch, generateLayer, generateCritic],
   );
 
   const handleCriticProceed = useCallback(
