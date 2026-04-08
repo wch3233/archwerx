@@ -66,7 +66,9 @@ VERDICT: PROCEED
 [or]
 VERDICT: FLAG FOR REVIEW — [specific layer and question]
 
-Questions must be specific to THIS architecture. The best questions cannot be answered without revealing a flaw or hidden assumption.`;
+Questions must be specific to THIS architecture. The best questions cannot be answered without revealing a flaw or hidden assumption.
+
+Write all questions in plain language. Avoid academic or architectural jargon. Each question should be understandable by a senior project manager, not just a software architect. Keep each question to one sentence. Maximum 3 questions per category.`;
 
 export function resolveKey() {
   const envKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
