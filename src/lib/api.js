@@ -3,7 +3,7 @@ const MODELS = {
   opus: 'claude-opus-4-6',
   sonnet: 'claude-sonnet-4-6',
 };
-const MAX_TOKENS = 1000;
+const MAX_TOKENS = 4096;
 
 const ARCH_SYS = `You are ArchWerx, a senior software architect operating under RAPTOR design principles (Recursive Abstractive Processing for Tree-Organized Reasoning). You generate layered architectural blueprints, one layer at a time.
 
