@@ -83,80 +83,90 @@ export default function BuilderView() {
     [description, architectHistory],
   );
 
-  const buildCriticContext = useCallback(
-    () => {
-      const summaries = layers.map((l) => {
-        const raw = l.content || '';
-        const name = LAYER_NAMES[l.layerId] || l.layerId;
-        const recMatch = raw.match(/RECOMMENDED:\s*(.+)/i);
-        const rec = recMatch ? recMatch[1].trim().slice(0, 150) : '(none)';
-        const assumptions = [];
-        let inAssumptions = false;
-        for (const line of raw.split('\n')) {
-          const stripped = line.trim().replace(/\*+/g, '');
-          if (/^ASSUMPTIONS MADE:/i.test(stripped)) { inAssumptions = true; continue; }
-          if (inAssumptions && /^[A-Z][A-Z\s]+:/.test(stripped.toUpperCase())) break;
-          if (inAssumptions && /^[-•*]/.test(stripped)) {
-            assumptions.push(stripped.replace(/^[-•*]\s*/, '').slice(0, 100));
-            if (assumptions.length >= 2) break;
-          }
+  // Build critic context from an explicit list of layer entries (not from React state)
+  function buildCriticContext(layerEntries) {
+    const summaries = layerEntries.map((l) => {
+      const raw = l.content || '';
+      const name = LAYER_NAMES[l.layerId] || l.layerId;
+      const recMatch = raw.match(/RECOMMENDED:\s*(.+)/i);
+      const rec = recMatch ? recMatch[1].trim().slice(0, 150) : '(none)';
+      const assumptions = [];
+      let inAssumptions = false;
+      for (const line of raw.split('\n')) {
+        const stripped = line.trim().replace(/\*+/g, '');
+        if (/^ASSUMPTIONS MADE:/i.test(stripped)) { inAssumptions = true; continue; }
+        if (inAssumptions && /^[A-Z][A-Z\s]+:/.test(stripped.toUpperCase())) break;
+        if (inAssumptions && /^[-•*]/.test(stripped)) {
+          assumptions.push(stripped.replace(/^[-•*]\s*/, '').slice(0, 100));
+          if (assumptions.length >= 2) break;
         }
-        const assumStr = assumptions.length > 0
-          ? assumptions.map((a) => `- ${a}`).join('\n')
-          : '- (none stated)';
-        return `Layer ${l.layerId.slice(1)} — ${name}\nRecommended: ${rec}\nKey assumptions:\n${assumStr}`;
-      });
-      return `Review the following architectural decisions:\n\n${summaries.join('\n\n')}`;
-    },
-    [layers],
-  );
+      }
+      const assumStr = assumptions.length > 0
+        ? assumptions.map((a) => `- ${a}`).join('\n')
+        : '- (none stated)';
+      return `Layer ${l.layerId.slice(1)} — ${name}\nRecommended: ${rec}\nKey assumptions:\n${assumStr}`;
+    });
+    return `Review the following architectural decisions:\n\n${summaries.join('\n\n')}`;
+  }
 
-  // Run the next step in the sequence
+  // Run the next step in the sequence.
+  // localLayers accumulates generated layer entries across the async chain
+  // so critic calls always have fresh content regardless of React state timing.
   const runNextStep = useCallback(
-    async (stepIndex) => {
+    async (stepIndex, localLayers = []) => {
       if (stepIndex >= SEQUENCE.length) {
         dispatch({ type: 'COMPLETE' });
         return;
+      }
+
+      // Seed localLayers from architectHistory on first call or retry
+      if (localLayers.length === 0) {
+        for (const e of architectHistory) {
+          if (e.type === 'architect_layer') {
+            localLayers.push(e);
+          }
+        }
       }
 
       const step = SEQUENCE[stepIndex];
 
       // Skip if already completed (for resume after error)
       if (step.type === 'layer' && completedIds.has(step.layerId)) {
-        runNextStep(stepIndex + 1);
+        runNextStep(stepIndex + 1, localLayers);
         return;
       }
       if (step.type === 'critic' && completedIds.has(step.criticId)) {
-        runNextStep(stepIndex + 1);
+        runNextStep(stepIndex + 1, localLayers);
         return;
       }
 
       if (generating.current) return;
       generating.current = true;
       setError(null);
-      lastRetryRef.current = () => { generating.current = false; runNextStep(stepIndex); };
+      lastRetryRef.current = () => { generating.current = false; runNextStep(stepIndex, localLayers); };
 
       try {
         if (step.type === 'layer') {
           dispatch({ type: 'APPROVE_LAYER', payload: { nextPhase: 'generating' } });
           const messages = buildArchitectMessages(step.layerId);
           const content = await callArchitect(messages, undefined, step.layerId);
-          dispatch({
-            type: 'PUSH_HISTORY',
-            payload: {
-              type: 'architect_layer',
-              layerId: step.layerId,
-              content,
-              isApproved: true,
-              isFlagged: false,
-              awaitingApproval: false,
-              timestamp: new Date().toISOString(),
-            },
-          });
-          console.log(`[ArchWerx] ${step.layerId} complete → next step ${stepIndex + 1}`);
+          const entry = {
+            type: 'architect_layer',
+            layerId: step.layerId,
+            content,
+            isApproved: true,
+            isFlagged: false,
+            awaitingApproval: false,
+            timestamp: new Date().toISOString(),
+          };
+          dispatch({ type: 'PUSH_HISTORY', payload: entry });
+          localLayers.push(entry);
+          console.log(`[ArchWerx] ${step.layerId} complete (${localLayers.length} layers in context) → next step ${stepIndex + 1}`);
         } else {
           dispatch({ type: 'APPROVE_LAYER', payload: { nextPhase: 'critic_gen' } });
-          const context = buildCriticContext();
+          // Build context from localLayers which has all generated content
+          const context = buildCriticContext(localLayers);
+          console.log(`[ArchWerx] ${step.criticId} context: ${context.length} chars from ${localLayers.length} layers`);
           const content = await callCritic(context, undefined, step.criticId);
           dispatch({
             type: 'PUSH_HISTORY',
@@ -174,18 +184,16 @@ export default function BuilderView() {
       } catch (err) {
         setError({
           message: err.message,
-          retryAction: () => { generating.current = false; runNextStep(stepIndex); },
+          retryAction: () => { generating.current = false; runNextStep(stepIndex, localLayers); },
         });
         generating.current = false;
         return;
       }
 
       generating.current = false;
-
-      // Small delay then continue to next step
-      setTimeout(() => runNextStep(stepIndex + 1), 500);
+      setTimeout(() => runNextStep(stepIndex + 1, localLayers), 500);
     },
-    [dispatch, buildArchitectMessages, buildCriticContext, completedIds],
+    [dispatch, buildArchitectMessages, architectHistory, completedIds],
   );
 
   // Kick off the sequence when session starts
