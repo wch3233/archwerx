@@ -50,12 +50,7 @@ export default function BuilderView() {
   const { state, layers, critics, dispatch } = useBlueprintContext();
   const { phase, description, architectHistory } = state;
   const generating = useRef(false);
-  const bottomRef = useRef(null);
   const [error, setError] = useState(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [architectHistory.length, phase]);
 
   const buildArchitectMessages = useCallback(
     (layerId) => {
@@ -330,7 +325,6 @@ export default function BuilderView() {
         </div>
       )}
 
-      <div ref={bottomRef} />
     </div>
   );
 }

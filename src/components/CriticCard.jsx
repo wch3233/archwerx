@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const QUESTION_TYPES = [
   { key: 'WHAT QUESTIONS', color: 'text-cyan-400', bg: 'bg-cyan-950/40', dot: 'bg-cyan-400' },
@@ -36,7 +36,6 @@ function parseCriticContent(raw) {
     }
     if (matched) continue;
 
-    // Skip header lines
     if (upper.startsWith('CRITIC REVIEW')) continue;
     if (!current) continue;
 
@@ -65,8 +64,14 @@ function Chevron({ expanded }) {
 
 export default function CriticCard({ critic, onProceed, onFlag }) {
   const { criticId, label, content, awaitingDecision } = critic;
-  const collapsible = !awaitingDecision;
-  const [expanded, setExpanded] = useState(!collapsible);
+  const [expanded, setExpanded] = useState(!!awaitingDecision);
+
+  // Auto-collapse when critic is resolved
+  useEffect(() => {
+    if (!awaitingDecision) {
+      setExpanded(false);
+    }
+  }, [awaitingDecision]);
 
   const { sections, verdict } = parseCriticContent(content || '');
 
@@ -74,8 +79,8 @@ export default function CriticCard({ critic, onProceed, onFlag }) {
   const verdictColor = isFlagged ? 'text-amber-400 bg-amber-950/40' : 'text-emerald-400 bg-emerald-950/40';
   const title = label ? `Critic Review \u2014 ${label}` : `Critic Review \u2014 ${criticId}`;
 
-  // Collapsed view for resolved critics
-  if (collapsible && !expanded) {
+  // Collapsed view
+  if (!expanded) {
     return (
       <div
         className="rounded-lg border border-zinc-700/40 bg-zinc-900 px-5 py-3 mb-2 cursor-pointer hover:bg-zinc-800/80 transition-colors"
@@ -99,14 +104,12 @@ export default function CriticCard({ critic, onProceed, onFlag }) {
     <div className="rounded-lg border border-zinc-700 bg-zinc-900 p-5 mb-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-zinc-100 font-mono">{title}</h3>
-        {collapsible && (
-          <button
-            onClick={() => setExpanded(false)}
-            className="p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
-          >
-            <Chevron expanded={true} />
-          </button>
-        )}
+        <button
+          onClick={() => setExpanded(false)}
+          className="p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+        >
+          <Chevron expanded={true} />
+        </button>
       </div>
 
       {QUESTION_TYPES.map(({ key, color, bg, dot }) => {

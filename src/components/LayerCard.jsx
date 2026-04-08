@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const SECTIONS = [
   { key: 'RECOMMENDED', color: 'text-emerald-400', bg: 'bg-emerald-950/40' },
@@ -61,8 +61,14 @@ function Chevron({ expanded }) {
 
 export default function LayerCard({ layer, onApprove, onRequestRevision }) {
   const { layerId, content, isApproved, isFlagged, awaitingApproval } = layer;
-  const collapsible = isApproved && !awaitingApproval;
-  const [expanded, setExpanded] = useState(!collapsible);
+  const [expanded, setExpanded] = useState(!isApproved);
+
+  // Auto-collapse when layer becomes approved
+  useEffect(() => {
+    if (isApproved && !awaitingApproval) {
+      setExpanded(false);
+    }
+  }, [isApproved, awaitingApproval]);
 
   const sections = parseLayerContent(content || '');
   const hasParsedContent = Object.values(sections).some((arr) => arr.length > 0);
@@ -79,8 +85,8 @@ export default function LayerCard({ layer, onApprove, onRequestRevision }) {
         ? 'border-cyan-500 animate-pulse'
         : 'border-zinc-700';
 
-  // Collapsed view for approved layers
-  if (collapsible && !expanded) {
+  // Collapsed view
+  if (!expanded) {
     return (
       <div
         className={`rounded-lg border ${borderColor} bg-zinc-900 px-5 py-3 mb-2 cursor-pointer hover:bg-zinc-800/80 transition-colors`}
@@ -89,9 +95,16 @@ export default function LayerCard({ layer, onApprove, onRequestRevision }) {
         <div className="flex items-center gap-3">
           <span className="text-zinc-100 font-mono text-sm font-semibold shrink-0">{header}</span>
           <span className="text-zinc-400 text-sm truncate flex-1">{recommended}</span>
-          <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-400 shrink-0">
-            Approved
-          </span>
+          {isApproved && (
+            <span className="text-xs px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-400 shrink-0">
+              Approved
+            </span>
+          )}
+          {isFlagged && (
+            <span className="text-xs px-2 py-0.5 rounded bg-amber-900/60 text-amber-400 shrink-0">
+              Flagged
+            </span>
+          )}
           <Chevron expanded={false} />
         </div>
       </div>
@@ -113,14 +126,12 @@ export default function LayerCard({ layer, onApprove, onRequestRevision }) {
               Flagged
             </span>
           )}
-          {collapsible && (
-            <button
-              onClick={() => setExpanded(false)}
-              className="p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
-            >
-              <Chevron expanded={true} />
-            </button>
-          )}
+          <button
+            onClick={() => setExpanded(false)}
+            className="p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
+          >
+            <Chevron expanded={true} />
+          </button>
         </div>
       </div>
 
