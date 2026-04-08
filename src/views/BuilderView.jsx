@@ -82,10 +82,30 @@ export default function BuilderView() {
 
   const buildCriticContext = useCallback(
     (label) => {
-      const layerContent = layers
-        .map((l) => l.content)
-        .join('\n\n---\n\n');
-      return `Review the following architectural layers:\n\n${layerContent}`;
+      // Send only RECOMMENDED + ASSUMPTIONS per layer to reduce context size
+      const summaries = layers.map((l) => {
+        const lines = (l.content || '').split('\n');
+        const out = [];
+        let capturing = false;
+        let section = '';
+        for (const line of lines) {
+          const upper = line.trim().replace(/\*+/g, '').toUpperCase();
+          if (upper.startsWith('RECOMMENDED:') || upper.startsWith('ASSUMPTIONS MADE:')) {
+            capturing = true;
+            section = upper.startsWith('RECOMMENDED') ? 'RECOMMENDED' : 'ASSUMPTIONS MADE';
+            out.push(line.trim());
+          } else if (capturing && (upper.startsWith('-') || upper.startsWith('•') || upper.startsWith('*'))) {
+            out.push(line.trim());
+          } else if (capturing && upper && !upper.startsWith('-') && !upper.startsWith('•')) {
+            // New section header — stop capturing
+            const isNewSection = /^[A-Z][A-Z\s]+:/.test(upper);
+            if (isNewSection) capturing = false;
+            else out.push(line.trim());
+          }
+        }
+        return `${l.layerId}:\n${out.join('\n')}`;
+      });
+      return `Review the following architectural decisions:\n\n${summaries.join('\n\n---\n\n')}`;
     },
     [layers],
   );

@@ -170,7 +170,7 @@ export async function callArchitect(messages, key, layerId) {
 
 // RETROFIT: Node 2
 export async function callCritic(context, key, criticId) {
-  const model = criticId === 'CR3' ? MODELS.opus : MODELS.sonnet;
+  const model = (criticId === 'CR2' || criticId === 'CR3') ? MODELS.opus : MODELS.sonnet;
   console.log(`[ArchWerx] critic ${criticId} → ${model}`);
   const messages = Array.isArray(context)
     ? context
